@@ -129,3 +129,81 @@ describe('TrainTicketEstimator ===> Date of trip', () => {
     expect(price).toEqual(9);
   });
 });
+
+describe('TrainTicketEstimator ==> Passengers type', () => {
+  let estimator: TrainTicketEstimator;
+  let date: Date;
+
+  beforeEach(() => {
+    estimator = new TrainTicketEstimator();
+    date = new Date();
+    date.setDate(date.getDate() + 20);
+    jest
+      .spyOn(estimator, 'fetchApiPrice')
+      .mockReturnValue(Promise.resolve(100));
+  });
+
+  it('If the passenger is less than one year old on the date of travel, it is free (at the same time, it will not have a seat assigned)', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 0, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(0);
+  });
+
+  it('If the passenger is 3 years old or less, it is a fixed rate of 9 euros', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 2, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(9);
+  });
+
+  it('Up to 18 years old, there is a 40% discount on the basic rate', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 16, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+
+    expect(price).toEqual(60);
+  });
+
+  it('In all other cases, it is +20% (for a single adult passenger)', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 30, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+
+    expect(price).toEqual(120);
+  });
+
+  it('If the passenger is a senior citizen (>= 70 years old), then he/she gets a 20% discount', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 72, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+
+    expect(price).toEqual(80);
+  });
+
+  it('Up to the age of 18, there is a 40% discount on the basic rate.', async () => {
+    const tripRequest = {
+      details: { from: 'Paris', to: 'Lyon', when: date },
+      passengers: [{ age: 16, discounts: [] }],
+    };
+
+    const price = await estimator.estimate(tripRequest);
+
+    expect(price).toEqual(60);
+  });
+});
