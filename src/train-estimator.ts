@@ -21,6 +21,42 @@ export class TrainTicketEstimator {
     }
 
     const passengers = trainDetails.passengers;
+    let totalPrice = this.getPassengersTicketsPrice(
+      priceFromApi,
+      passengers,
+      trainDetails
+    );
+
+    totalPrice = this.getCouplesDiscount(passengers, totalPrice, priceFromApi);
+
+    return totalPrice;
+  }
+
+  private getCouplesDiscount(
+    passengers: import('d:/03 PROJETS/methodo tests/train-estimator/src/model/trip.request').Passenger[],
+    totalPrice: number,
+    priceFromApi: number
+  ) {
+    const adultesCount = passengers.filter((passenger) => passenger.age >= 18);
+    const coupleDiscounts = passengers.filter((passenger) =>
+      passenger.discounts.includes(DiscountCard.Couple)
+    );
+    if (adultesCount.length > 1 && coupleDiscounts.length >= 1) {
+      totalPrice -= priceFromApi * 0.2 * adultesCount.length;
+    } else if (
+      adultesCount.length == 1 &&
+      passengers[0].discounts.includes(DiscountCard.HalfCouple)
+    ) {
+      totalPrice -= priceFromApi * 0.1;
+    }
+    return totalPrice;
+  }
+
+  private getPassengersTicketsPrice(
+    priceFromApi: number,
+    passengers: import('d:/03 PROJETS/methodo tests/train-estimator/src/model/trip.request').Passenger[],
+    trainDetails: TripRequest
+  ) {
     let totalPrice = 0;
     let temporaryPrice = priceFromApi;
     for (let i = 0; i < passengers.length; i++) {
@@ -30,6 +66,7 @@ export class TrainTicketEstimator {
       if (passengers[i].age < 1) {
         temporaryPrice = 0;
       }
+
       // Seniors
       else if (passengers[i].age <= 17) {
         temporaryPrice = priceFromApi * 0.6;
@@ -73,39 +110,6 @@ export class TrainTicketEstimator {
       totalPrice += temporaryPrice;
       temporaryPrice = priceFromApi;
     }
-
-    if (passengers.length == 2) {
-      let couple = false;
-      let minor = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.Couple)) {
-          couple = true;
-        }
-        if (passengers[i].age < 18) {
-          minor = true;
-        }
-      }
-      if (couple && !minor) {
-        totalPrice -= priceFromApi * 0.2 * 2;
-      }
-    }
-
-    if (passengers.length == 1) {
-      let couple = false;
-      let minor = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.HalfCouple)) {
-          couple = true;
-        }
-        if (passengers[i].age < 18) {
-          minor = true;
-        }
-      }
-      if (couple && !minor) {
-        totalPrice -= priceFromApi * 0.1;
-      }
-    }
-
     return totalPrice;
   }
 
