@@ -1,14 +1,12 @@
-import {
-  DiscountCard,
-  Passenger,
-  TripDetails,
-  TripRequest,
-} from './model/trip.request';
+import { TripRequest } from './model/trip.request';
+import { TripDetails } from './model/TripDetails';
+import { IPassenger } from './model/interface/IPassenger';
 import { TrainTicketEstimator } from './train-estimator';
+import { DiscountCard } from './utils/tripCostCalculate';
 
 describe('TrainTicketEstimator ==> Rules of the trade', () => {
   let estimator: TrainTicketEstimator;
-  let passengers: Passenger[];
+  let passengers: IPassenger[];
 
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
@@ -44,9 +42,7 @@ describe('TrainTicketEstimator ==> Rules of the trade', () => {
   });
 
   it('should throw InvalidTripInputException when date is invalid', async () => {
-    const date = new Date();
-    date.setDate(date.getDate() - 1);
-
+    const date = new Date(2022, 1, 1);
     const tripRequest: TripRequest = new TripRequest(
       { from: 'Paris', to: 'Lyon', when: date } as TripDetails,
       passengers
@@ -81,7 +77,7 @@ describe('TrainTicketEstimator ==> Rules of the trade', () => {
 
 describe('TrainTicketEstimator ===> Date of trip', () => {
   let estimator: TrainTicketEstimator;
-  let passengers: Passenger[];
+  let passengers: IPassenger[];
 
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
@@ -93,7 +89,7 @@ describe('TrainTicketEstimator ===> Date of trip', () => {
 
   it('30 days before the trip, we apply -20% discount (+20% for adult passenger)', async () => {
     const date = new Date();
-    date.setDate(date.getDate() + 30);
+    date.setDate(date.getDate() + 35);
 
     const tripRequest: TripRequest = new TripRequest(
       { from: 'Paris', to: 'Lyon', when: date } as TripDetails,
@@ -119,7 +115,8 @@ describe('TrainTicketEstimator ===> Date of trip', () => {
 
   it('We apply 2% increase per day for 25 days (so 0% at 20 days from the departure date) (+20% for adult passenger)', async () => {
     const date = new Date();
-    date.setDate(date.getDate() + 20);
+    const theResholdDays = 20;
+    date.setDate(date.getDate() + theResholdDays);
 
     const tripRequest: TripRequest = new TripRequest(
       { from: 'Paris', to: 'Lyon', when: date } as TripDetails,
@@ -165,7 +162,8 @@ describe('TrainTicketEstimator ==> Passengers type', () => {
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
     date = new Date();
-    date.setDate(date.getDate() + 20);
+    const theResholdDays = 20;
+    date.setDate(date.getDate() + theResholdDays);
     TripDetails = { from: 'Paris', to: 'Lyon', when: date } as TripDetails;
     jest
       .spyOn(estimator, 'fetchApiPrice')
@@ -239,7 +237,8 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
     date = new Date();
-    date.setDate(date.getDate() + 20);
+    const theResholdDays = 20;
+    date.setDate(date.getDate() + theResholdDays);
     tripDetails = new TripDetails('Paris', 'Lyon', date);
     jest
       .spyOn(estimator, 'fetchApiPrice')

@@ -1,9 +1,7 @@
-import {
-  ApiException,
-  ApiSNCF,
-  TripDetails,
-  TripRequest,
-} from './model/trip.request';
+import { TripRequest } from './model/trip.request';
+import { ApiException } from './exceptions/ApiException';
+import { ApiSNCF } from './model/ApiSNCF';
+import { TripDetails } from './model/TripDetails';
 
 export class TrainTicketEstimator {
   async estimate(tripRequest: TripRequest): Promise<number> {
@@ -25,7 +23,8 @@ export class TrainTicketEstimator {
       throw new ApiException();
     }
 
-    let totalPrice = tripRequest.calculateAllPassengersPrice(priceFromApi);
+    tripRequest.fetchApiPrice();
+    let totalPrice = tripRequest.getTripCost(priceFromApi);
     totalPrice = tripRequest.getPassengersDiscounts(totalPrice, priceFromApi);
 
     return totalPrice;
