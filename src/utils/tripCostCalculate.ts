@@ -7,6 +7,7 @@ export enum DiscountCard {
   TrainStroke = 'TrainStroke',
   Couple = 'Couple',
   HalfCouple = 'HalfCouple',
+  FamilyCard = 'FamilyCard',
 }
 
 export function calculateTripCostWithoutDiscount(
@@ -34,7 +35,7 @@ export function calculateTripCostWithoutDiscount(
 
 function calculateTemporaryPrice(
   age: number,
-  discounts: DiscountCard[],
+  _discounts: DiscountCard[],
   priceFromApi: number,
   when: Date
 ): number {
@@ -46,32 +47,29 @@ function calculateTemporaryPrice(
     temporaryPrice = priceFromApi * 0.6;
   } else if (age >= 70) {
     temporaryPrice = priceFromApi * 0.8;
-    if (discounts.includes(DiscountCard.Senior)) {
-      temporaryPrice -= priceFromApi * 0.2;
-    }
   } else {
     temporaryPrice = priceFromApi * 1.2;
   }
 
   const today = new Date();
+  const MS_PER_DAY = 1000 * 3600 * 24;
+  const theResholdDays = 20;
+
+  const timeDifference = Math.abs(when.getTime() - new Date().getTime());
+  const daysDifference = Math.ceil(timeDifference / MS_PER_DAY);
+
   if (when.getTime() >= today.setDate(today.getDate() + 30)) {
     temporaryPrice -= priceFromApi * 0.2;
   } else if (when.getTime() > today.setDate(today.getDate() - 30 + 5)) {
-    const MS_PER_DAY = 1000 * 3600 * 24;
-    const theResholdDays = 20;
-    const timeDifference = Math.abs(when.getTime() - new Date().getTime());
-    const daysDifference = Math.ceil(timeDifference / MS_PER_DAY);
     temporaryPrice += (theResholdDays - daysDifference) * 0.02 * priceFromApi;
+  } else if (when.getTime() <= today.setHours(today.getHours() - 6)) {
+    temporaryPrice -= priceFromApi * 0.2;
   } else {
     temporaryPrice += priceFromApi;
   }
 
   if (age > 0 && age < 4) {
     temporaryPrice = 9;
-  }
-
-  if (discounts.includes(DiscountCard.TrainStroke)) {
-    temporaryPrice = 1;
   }
 
   return temporaryPrice;
@@ -82,20 +80,50 @@ export function applyDiscountCard(
   totalPrice: number,
   priceFromApi: number
 ): number {
-  const numberOfAdults = passengers.filter((p) => p.age >= 18).length;
-  const hasCoupleDiscount = passengers.some((p) =>
-    p.discounts.includes(DiscountCard.Couple)
-  );
+  const familyCardHolderLastName = passengers.find(
+    (passenger) =>
+      passenger.discounts.includes(DiscountCard.FamilyCard) &&
+      passenger.lastName !== undefined
+  )?.lastName;
 
-  const hasHalfCoupleDiscount = passengers[0]?.discounts.includes(
-    DiscountCard.HalfCouple
-  );
+  if (familyCardHolderLastName !== undefined) {
+    for (const passenger of passengers) {
+      if (
+        passenger.lastName !== undefined &&
+        passenger.lastName === familyCardHolderLastName
+      ) {
+        totalPrice -= priceFromApi * 0.3;
+      }
+    }
+  } else {
+    const numberOfAdults = passengers.filter(
+      (passenger) => passenger.age >= 18
+    ).length;
+    const hasCoupleDiscount = passengers.some((passenger) =>
+      passenger.discounts.includes(DiscountCard.Couple)
+    );
 
-  if (numberOfAdults > 1 && hasCoupleDiscount) {
-    totalPrice -= priceFromApi * 0.2 * numberOfAdults;
-  } else if (numberOfAdults === 1 && hasHalfCoupleDiscount) {
-    totalPrice -= priceFromApi * 0.1;
+    const hasHalfCoupleDiscount = passengers[0]?.discounts.includes(
+      DiscountCard.HalfCouple
+    );
+
+    if (numberOfAdults > 1 && hasCoupleDiscount) {
+      totalPrice -= priceFromApi * 0.2 * numberOfAdults;
+    } else if (numberOfAdults === 1 && hasHalfCoupleDiscount) {
+      totalPrice -= priceFromApi * 0.1;
+    }
+
+    for (const passenger of passengers) {
+      if (
+        passenger.discounts.includes(DiscountCard.Senior) &&
+        passenger.age >= 70
+      ) {
+        totalPrice -= priceFromApi * 0.2;
+      }
+      if (passenger.discounts.includes(DiscountCard.TrainStroke)) {
+        totalPrice = 1;
+      }
+    }
   }
-
   return totalPrice;
 }

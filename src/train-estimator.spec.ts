@@ -78,13 +78,14 @@ describe('TrainTicketEstimator ==> Rules of the trade', () => {
 describe('TrainTicketEstimator ===> Date of trip', () => {
   let estimator: TrainTicketEstimator;
   let passengers: IPassenger[];
+  const apiMockPrice = 100;
 
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
     passengers = [{ age: 30, discounts: [] }];
     jest
       .spyOn(estimator, 'fetchApiPrice')
-      .mockReturnValue(Promise.resolve(100));
+      .mockReturnValue(Promise.resolve(apiMockPrice));
   });
 
   it('30 days before the trip, we apply -20% discount (+20% for adult passenger)', async () => {
@@ -158,6 +159,7 @@ describe('TrainTicketEstimator ==> Passengers type', () => {
   let estimator: TrainTicketEstimator;
   let date: Date;
   let TripDetails: TripDetails;
+  const apiMockPrice = 100;
 
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
@@ -167,7 +169,7 @@ describe('TrainTicketEstimator ==> Passengers type', () => {
     TripDetails = { from: 'Paris', to: 'Lyon', when: date } as TripDetails;
     jest
       .spyOn(estimator, 'fetchApiPrice')
-      .mockReturnValue(Promise.resolve(100));
+      .mockReturnValue(Promise.resolve(apiMockPrice));
   });
 
   it('If the passenger is less than one year old on the date of travel, it is free (at the same time, it will not have a seat assigned)', async () => {
@@ -233,6 +235,7 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
   let estimator: TrainTicketEstimator;
   let date: Date;
   let tripDetails: TripDetails;
+  const apiMockPrice = 100;
 
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
@@ -242,7 +245,7 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
     tripDetails = new TripDetails('Paris', 'Lyon', date);
     jest
       .spyOn(estimator, 'fetchApiPrice')
-      .mockReturnValue(Promise.resolve(100));
+      .mockReturnValue(Promise.resolve(apiMockPrice));
   });
   it('TrainStroke staff card: all tickets are 1 euro', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
@@ -261,24 +264,24 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
     expect(price).toBe(60);
   });
 
-  it('Couple Card: valid only if the trip involves 2 adult passengers. 20% discount on the ticket of each of these passengers.', async () => {
+  it('Couple Card valid (2 adult passengers). -20% on the ticket of each of these passengers. (+20% for each adult passenger)', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
       { age: 30, discounts: [DiscountCard.Couple] },
       { age: 30, discounts: [] },
     ]);
 
     const price = await estimator.estimate(tripRequest);
-    expect(price).toBe(200);
+    expect(price).toBe(100 + 100);
   });
 
-  it('Couple Card: valid only if the trip involves 2 adult passengers. 20% discount on the ticket of each of these passengers. Valid only once!', async () => {
+  it('Couple Card valid (2 adult passengers). -20% on the ticket of each of these passengers. (+20% for each adult passenger) Valid only once!', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
       { age: 30, discounts: [DiscountCard.Couple] },
       { age: 30, discounts: [DiscountCard.Couple] },
     ]);
 
     const price = await estimator.estimate(tripRequest);
-    expect(price).toBe(200);
+    expect(price).toBe(100 + 100);
   });
 
   it('should not apply the Couple discount for two child passengers (-40% for each minor (Up to 18 years old))', async () => {
@@ -288,7 +291,7 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
     ]);
 
     const price = await estimator.estimate(tripRequest);
-    expect(price).toBe(120);
+    expect(price).toBe(60 + 60);
   });
 
   it('Mid-couple card: valid only if the trip involves 1 adult passenger. 10% discount on the trip. (+20% for adult passenger)', async () => {
@@ -307,5 +310,113 @@ describe('TrainTicketEstimator ==> Discount cards', () => {
 
     const price = await estimator.estimate(tripRequest);
     expect(price).toBe(60);
+  });
+});
+
+describe('New feature ==> 6 hours before departure', () => {
+  let estimator: TrainTicketEstimator;
+  let date: Date;
+  let tripDetails: TripDetails;
+  const apiMockPrice = 100;
+
+  beforeEach(() => {
+    estimator = new TrainTicketEstimator();
+    date = new Date();
+    date.setHours(date.getHours() + 5);
+    tripDetails = new TripDetails('Paris', 'Lyon', date);
+    jest
+      .spyOn(estimator, 'fetchApiPrice')
+      .mockReturnValue(Promise.resolve(apiMockPrice));
+  });
+  it('6 hours before departure, we apply a 20% discount on the ticket price (+20% for adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 30, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(100);
+  });
+});
+
+describe('New features ==> The family card', () => {
+  let estimator: TrainTicketEstimator;
+  let date: Date;
+  let tripDetails: TripDetails;
+  const apiMockPrice = 100;
+
+  beforeEach(() => {
+    estimator = new TrainTicketEstimator();
+    date = new Date();
+    const theResholdDays = 20;
+    date.setDate(date.getDate() + theResholdDays);
+    tripDetails = new TripDetails('Paris', 'Lyon', date);
+    jest
+      .spyOn(estimator, 'fetchApiPrice')
+      .mockReturnValue(Promise.resolve(apiMockPrice));
+  });
+
+  it('The family card should not be applied if the first name of the card holder is not defined (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 30, discounts: [] },
+      { age: 35, discounts: [DiscountCard.FamilyCard] },
+      { age: 37, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(120 + 120 + 120);
+  });
+  it('The family card should not be applied if the first names of the passengers are not defined (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 30, discounts: [] },
+      { age: 35, discounts: [DiscountCard.FamilyCard] },
+      { age: 37, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(120 + 120 + 120);
+  });
+  it('The family card should not be applied if the first name of the card holder is not defined (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 30, discounts: [], lastName: 'Dupont' },
+      { age: 35, discounts: [DiscountCard.FamilyCard] },
+      { age: 37, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(120 + 120 + 120);
+  });
+  it('If a passenger has a family card, all passengers with the same last name receive a 30% discount (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 30, discounts: [], lastName: 'Dupont' },
+      { age: 35, discounts: [DiscountCard.FamilyCard], lastName: 'Dupont' },
+      { age: 37, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(90 + 90 + 120);
+  });
+  it('The family card cannot be combined with other discounts. (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 47, discounts: [DiscountCard.FamilyCard], lastName: 'Dupont' },
+      { age: 35, discounts: [DiscountCard.Couple], lastName: 'Dupont' },
+      { age: 37, discounts: [DiscountCard.HalfCouple] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(90 + 90 + 120);
+  });
+  it('The family card cannot be combined with other discounts. (+20% for each adult passenger) (-20% for each senior passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      {
+        age: 77,
+        discounts: [DiscountCard.FamilyCard, DiscountCard.Senior],
+        lastName: 'Dupont',
+      },
+      { age: 35, discounts: [], lastName: 'Dupont' },
+      { age: 37, discounts: [DiscountCard.HalfCouple] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(50 + 90 + 120);
   });
 });
