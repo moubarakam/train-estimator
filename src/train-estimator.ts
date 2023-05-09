@@ -1,8 +1,6 @@
 import { TripRequest } from './model/trip.request';
 import { ApiException } from './exceptions/ApiException';
-import { ApiSNCF } from './model/ApiSNCF';
 import { TripDetails } from './model/TripDetails';
-
 export class TrainTicketEstimator {
   async estimate(tripRequest: TripRequest): Promise<number> {
     if (tripRequest.passengers.length === 0) {
@@ -30,7 +28,14 @@ export class TrainTicketEstimator {
   }
 
   async fetchApiPrice(details: TripDetails): Promise<number> {
-    const api = new ApiSNCF(details);
-    return await api.fetchApiSNCF();
+    return (
+      (
+        await (
+          await fetch(
+            `https://sncf.com/api/train/estimate/price?from=${details.from}&to=${details.to}&date=${details.when}`
+          )
+        ).json()
+      )?.price || -1
+    );
   }
 }

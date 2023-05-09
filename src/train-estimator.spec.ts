@@ -433,7 +433,7 @@ describe('New features ==> The family card', () => {
   });
 });
 
-describe('Optimisation tests de mutation', () => {
+describe('Optimization of mutation tests', () => {
   let estimator: TrainTicketEstimator;
   let date: Date;
   let tripDetails: TripDetails;
@@ -450,7 +450,7 @@ describe('Optimisation tests de mutation', () => {
       .mockReturnValue(Promise.resolve(apiMockPrice));
   });
 
-  it('Mutation test', async () => {
+  it('Optimization of mutation tests ==> (1 year old pays 9€)', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
       { age: 1, discounts: [] },
     ]);
@@ -458,7 +458,7 @@ describe('Optimisation tests de mutation', () => {
     const price = await estimator.estimate(tripRequest);
     expect(price).toBe(9);
   });
-  it('Mutation test', async () => {
+  it('Optimization of mutation tests ==> (> 1 year old is free)', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
       { age: 0.5, discounts: [] },
     ]);
@@ -466,7 +466,7 @@ describe('Optimisation tests de mutation', () => {
     const price = await estimator.estimate(tripRequest);
     expect(price).toBe(0);
   });
-  it('Mutation test (-40% for young people)', async () => {
+  it('Optimization of mutation tests ==> (4 year old pays 60€)', async () => {
     const tripRequest: TripRequest = new TripRequest(tripDetails, [
       { age: 4, discounts: [] },
     ]);

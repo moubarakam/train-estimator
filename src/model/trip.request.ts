@@ -1,4 +1,3 @@
-import { ApiSNCF } from './ApiSNCF';
 import {
   applyDiscountCard,
   calculateTripCostWithoutDiscount,
@@ -24,10 +23,5 @@ export class TripRequest {
 
   getPassengersDiscounts(totalPrice: number, priceFromApi: number) {
     return applyDiscountCard(this.passengers, totalPrice, priceFromApi);
-  }
-
-  async fetchApiPrice(): Promise<number> {
-    const api = new ApiSNCF(this.details);
-    return await api.fetchApiSNCF();
   }
 }
