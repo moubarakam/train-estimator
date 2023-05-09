@@ -90,7 +90,19 @@ describe('TrainTicketEstimator ===> Date of trip', () => {
 
   it('30 days before the trip, we apply -20% discount (+20% for adult passenger)', async () => {
     const date = new Date();
-    date.setDate(date.getDate() + 35);
+    date.setDate(date.getDate() + 30);
+
+    const tripRequest: TripRequest = new TripRequest(
+      { from: 'Paris', to: 'Lyon', when: date } as TripDetails,
+      passengers
+    );
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toEqual(100);
+  });
+  it('30 days before the trip, we apply -20% discount (+20% for adult passenger)', async () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 37);
 
     const tripRequest: TripRequest = new TripRequest(
       { from: 'Paris', to: 'Lyon', when: date } as TripDetails,
@@ -322,7 +334,7 @@ describe('New feature ==> 6 hours before departure', () => {
   beforeEach(() => {
     estimator = new TrainTicketEstimator();
     date = new Date();
-    date.setHours(date.getHours() + 5);
+    date.setHours(date.getHours() + 6);
     tripDetails = new TripDetails('Paris', 'Lyon', date);
     jest
       .spyOn(estimator, 'fetchApiPrice')
@@ -418,5 +430,85 @@ describe('New features ==> The family card', () => {
 
     const price = await estimator.estimate(tripRequest);
     expect(price).toBe(50 + 90 + 120);
+  });
+});
+
+describe('Optimisation tests de mutation', () => {
+  let estimator: TrainTicketEstimator;
+  let date: Date;
+  let tripDetails: TripDetails;
+  const apiMockPrice = 100;
+
+  beforeEach(() => {
+    estimator = new TrainTicketEstimator();
+    date = new Date();
+    const theResholdDays = 20;
+    date.setDate(date.getDate() + theResholdDays);
+    tripDetails = new TripDetails('Paris', 'Lyon', date);
+    jest
+      .spyOn(estimator, 'fetchApiPrice')
+      .mockReturnValue(Promise.resolve(apiMockPrice));
+  });
+
+  it('Mutation test', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 1, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(9);
+  });
+  it('Mutation test', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 0.5, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(0);
+  });
+  it('Mutation test (-40% for young people)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 4, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(60);
+  });
+  it('The family card cannot be combined with other discounts. (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 47, discounts: [DiscountCard.FamilyCard], lastName: 'Dupont' },
+      { age: 35, discounts: [] },
+      { age: 37, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(90 + 120 + 120);
+  });
+
+  it('Couple Card valid (2 adult passengers). -20% on the ticket of each of these passengers. (+20% for each adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 18, discounts: [DiscountCard.Couple] },
+      { age: 18, discounts: [] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(60 + 60);
+  });
+
+  it('Senior Card: valid only if the user is over 70 years old. 20% additional discount (-20% for senior passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 70, discounts: [DiscountCard.Senior] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(60);
+  });
+  it('(+20% for adult passenger)', async () => {
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [
+      { age: 50, discounts: [DiscountCard.Senior] },
+    ]);
+
+    const price = await estimator.estimate(tripRequest);
+    expect(price).toBe(120);
   });
 });

@@ -41,9 +41,7 @@ function calculateTemporaryPrice(
 ): number {
   let temporaryPrice: number;
 
-  if (age < 1) {
-    temporaryPrice = 0;
-  } else if (age <= 18) {
+  if (age <= 18) {
     temporaryPrice = priceFromApi * 0.6;
   } else if (age >= 70) {
     temporaryPrice = priceFromApi * 0.8;
@@ -68,7 +66,9 @@ function calculateTemporaryPrice(
     temporaryPrice += priceFromApi;
   }
 
-  if (age > 0 && age < 4) {
+  if (age < 1) {
+    temporaryPrice = 0;
+  } else if (age < 4) {
     temporaryPrice = 9;
   }
 
@@ -80,45 +80,33 @@ export function applyDiscountCard(
   totalPrice: number,
   priceFromApi: number
 ): number {
-  const familyCardHolderLastName = passengers.find(
-    (passenger) =>
-      passenger.discounts.includes(DiscountCard.FamilyCard) &&
-      passenger.lastName !== undefined
+  const familyCardHolderLastName = passengers.find((passenger) =>
+    passenger.discounts.includes(DiscountCard.FamilyCard)
   )?.lastName;
 
   if (familyCardHolderLastName !== undefined) {
     for (const passenger of passengers) {
-      if (
-        passenger.lastName !== undefined &&
-        passenger.lastName === familyCardHolderLastName
-      ) {
+      if (passenger.lastName === familyCardHolderLastName)
         totalPrice -= priceFromApi * 0.3;
-      }
     }
   } else {
     const numberOfAdults = passengers.filter(
-      (passenger) => passenger.age >= 18
+      (passenger) => passenger.age > 18
     ).length;
     const hasCoupleDiscount = passengers.some((passenger) =>
       passenger.discounts.includes(DiscountCard.Couple)
     );
 
-    const hasHalfCoupleDiscount = passengers[0]?.discounts.includes(
-      DiscountCard.HalfCouple
-    );
-
-    if (numberOfAdults > 1 && hasCoupleDiscount) {
-      totalPrice -= priceFromApi * 0.2 * numberOfAdults;
-    } else if (numberOfAdults === 1 && hasHalfCoupleDiscount) {
-      totalPrice -= priceFromApi * 0.1;
+    if (numberOfAdults === 1) {
+      if (passengers[0].discounts.includes(DiscountCard.HalfCouple))
+        totalPrice -= priceFromApi * 0.1;
+    } else {
+      if (hasCoupleDiscount) totalPrice -= priceFromApi * 0.2 * numberOfAdults;
     }
 
     for (const passenger of passengers) {
-      if (
-        passenger.discounts.includes(DiscountCard.Senior) &&
-        passenger.age >= 70
-      ) {
-        totalPrice -= priceFromApi * 0.2;
+      if (passenger.discounts.includes(DiscountCard.Senior)) {
+        if (passenger.age >= 70) totalPrice -= priceFromApi * 0.2;
       }
       if (passenger.discounts.includes(DiscountCard.TrainStroke)) {
         totalPrice = 1;

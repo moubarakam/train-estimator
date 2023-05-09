@@ -23,7 +23,6 @@ export class TrainTicketEstimator {
       throw new ApiException();
     }
 
-    tripRequest.fetchApiPrice();
     let totalPrice = tripRequest.getTripCost(priceFromApi);
     totalPrice = tripRequest.getPassengersDiscounts(totalPrice, priceFromApi);
 

@@ -1,13 +1,13 @@
 import { InvalidTripInputException } from '../exceptions/InvalidTripInputException';
 
 export class TripDetails {
-  public from = '';
-  public to = '';
-  public when = new Date();
+  public from: string;
+  public to: string;
+  public when: Date;
 
   constructor(from: string, to: string, when: Date) {
-    this.from = from.trim();
-    this.to = to.trim();
+    this.from = from;
+    this.to = to;
     this.when = when;
   }
 
@@ -25,7 +25,7 @@ export class TripDetails {
       new Date(
         new Date().getFullYear(),
         new Date().getMonth(),
-        new Date().getDay(),
+        new Date().getDate(),
         0,
         0,
         0
